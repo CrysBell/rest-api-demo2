@@ -21,6 +21,8 @@ import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
@@ -290,6 +292,7 @@ public class ProductController {
      * Metodo que recupera la imagen de un producto, dado el codigo que
      * tiene como prefijo el nombre de la imagen
      */
+
     @GetMapping("/fileDownLoad/{fileCode}")
     public ResponseEntity<?> downloadFile(@PathVariable String fileCode) {
 
@@ -322,5 +325,78 @@ public class ProductController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, headerValue)
                 .body(resource);
     }
+
+    /**
+     * Metodo que actualiza (update) un producto dado el id del mismo.
+     * 
+     * Es basicamente igual al metodo que persiste el producto.
+     * Respondera a una peticion del tipo siguiente, por ejemplo:
+     * 
+     * http://localhost:8080/productos/3
+     * 
+     * Y no habra ambiguedad con el metodo de buscar un producto por el id, porque
+     * el verbo utilizado
+     * del protocolo HTTP sera diferente, PUT en este caso.
+     * 
+     */
+
+    @PutMapping("/{id}")
+    @Transactional
+    public ResponseEntity<Map<String, Object>> updateProducto(@Valid @RequestBody Product product,
+    BindingResult results, @PathVariable Integer id) {
+
+    ResponseEntity<Map<String, Object>> responseEntity = null;
+    Map<String, Object> responseAsMap = new HashMap<>();
+
+    // Comprobar si el producto recibido en el cuerpo de la peticion tiene errores
+    if (results.hasErrors()) {
+
+    // Recuperar todos los errores que tiene el producto
+    List<ObjectError> objectErrors = results.getAllErrors();
+
+    // Hay que recorrer la lista de ObjectError para recuperar los mensajes de error
+    // por defecto que le voy a mostrar al cliente que ha hecho la peticion,
+    // es decir, que ha enviado el producto mal formado
+
+    // Los mensajes de error tienen que ser almacenados en una lista donde cada
+    // elemento de la lista
+    // sea un String
+    List<String> mensajesError = new ArrayList<>();
+
+    objectErrors.stream().forEach(objectError -> mensajesError.add(objectError.getDefaultMessage()));
+
+    responseAsMap.put("errores", mensajesError);
+    responseAsMap.put("product", product);
+
+    responseEntity = new ResponseEntity<Map<String, Object>>(responseAsMap, HttpStatus.BAD_REQUEST);
+
+    return responseEntity;
+
+    }
+
+    /**
+    * Si no hay errores vamos a actualizar el producto recibido y devolver
+    * informacion
+    * al respecto como se requiere para una API REST
+    */
+
+    try {
+    product.setId(id);
+    Product productoModoficado = productService.save(product);
+    String mensaje = "El producto ha sido modificado exitosamente";
+    responseAsMap.put("mensaje", mensaje);
+    responseAsMap.put("producto", productoModoficado);
+    responseEntity = new ResponseEntity<Map<String, Object>>(responseAsMap, HttpStatus.OK);
+    } catch (DataAccessException e) {
+    String errorMessage = "El producto no se pudo modificar y la causa mas probable es: "
+    + e.getMostSpecificCause();
+    responseAsMap.put("error", errorMessage);
+    responseEntity = new ResponseEntity<Map<String, Object>>(responseAsMap,
+    HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    return responseEntity;
+    }
+
 
 }

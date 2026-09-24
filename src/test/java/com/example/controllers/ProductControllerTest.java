@@ -33,6 +33,7 @@ import com.example.services.ProductService;
 import com.example.utilities.FileDownloadUtil;
 import com.example.utilities.FileUploadUtil;
 
+import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
 @WebMvcTest(ProductController.class)
@@ -215,53 +216,58 @@ class ProductControllerTest {
 	}
 
 	@Test
-	@DisplayName("Controller Test para actualizar un producto")
-	void testActualizarProducto() {
-		// given
+@DisplayName("Controller Test para actualizar un producto")
+void testActualizarProducto() throws JacksonException, Exception {
 
-		int productoId = 1;
+    // given
 
-		Presentation presentacionGuardada = Presentation.builder().description(null).name("docena").build();
+    int productoId = 1;
 
-		Product productoGuardado = Product.builder()
-				.name("Camara")
-				.description("Resolucion Alta")
-				.price(new BigDecimal(2000))
-				.stock(40)
-				.presentation(presentacionGuardada)
-				.productImage("perro.jpeg")
-				.build();
+    Presentation presentacionGuardada = Presentation.builder()
+            .description(null)
+            .name("docena")
+            .build();
 
-		Presentation presentacionActualizada = Presentation.builder().description(null).name("unidad").build();
+    Product productoGuardado = Product.builder()
+            .name("Camara")
+            .description("Resolucion Alta")
+            .price(new BigDecimal(2000))
+            .stock(40)
+            .presentation(presentacionGuardada)
+            .productImage("perro.jpeg")
+            .build();
 
-		Product productoActualizado = Product.builder()
-				.name("HDCamara")
-				.description("Muy Alta Resolucion")
-				.price(new BigDecimal(2500))
-				.stock(400)
-				.presentation(presentacionActualizada)
-				.productImage("perro.jpeg")
-				.build();
+    Presentation presentacionActualizada = Presentation.builder()
+            .description(null)
+            .name("unidad")
+            .build();
 
-		given(productService.findById(productoId))
-				.willReturn(productoGuardado);
+    Product productoActualizado = Product.builder()
+            .name("HDCamara")
+            .description("Muy Alta Resolucion")
+            .price(new BigDecimal(2500))
+            .stock(400)
+            .presentation(presentacionActualizada)
+            .productImage("perro.jpeg")
+            .build();
 
-		given(productService.save(any(Product.class)))
-				.willAnswer(invocation -> invocation.getArgument(0));
+    given(productService.save(any(Product.class)))
+            .willAnswer(invocation -> invocation.getArgument(0));
 
-		// when
+    // when
 
-		// Si todo el producto se recibe en el cuerpo de la peticion procedemos
-		// de la forma siguiente, de lo contrario, si por una parte va el producto
-		// y por otra la imagen, hay que proceder de manera diferente (muy similar
-		// al test de persistir un producto con su imagen)
+    ResultActions response = mockMvc.perform(
+            put("/products/{id}", productoId)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(productoActualizado))
+    );
 
-		//CNTRL + SHIF + 7
+    // then
 
-	// 	ResultActions response = mockMvc.perform(put("/productos/{id}", productoId)
-	// 			.contentType(MediaType.APPLICATION_JSON)
-	// 			.content(objectMapper.writeValueAsString(productoActualizado))
-	// 			.header("Authorization", this.token));
-	}
+    response.andExpect(status().isOk())
+            .andDo(print())
+            .andExpect(jsonPath("$.producto.name",
+                    is(productoActualizado.getName())));
+}
 
 }
