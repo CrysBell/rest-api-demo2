@@ -74,24 +74,24 @@ class ProductControllerTest {
 
 	@Autowired
 	ObjectMapper objectMapper;
-	
+
 	List<Product> products = new ArrayList<>();
 	Presentation presentation1, presentation2;
 	Product product1, product2;
-	
+
 	@BeforeEach
 	void setUp() {
-		
+
 		presentation1 = Presentation.builder()
 				.name("decenas")
 				.description("Por decenas")
 				.build();
-		
+
 		presentation2 = Presentation.builder()
 				.name("unidades")
 				.description("Por unidades")
 				.build();
-			
+
 		product1 = Product.builder()
 				.name("Camara")
 				.description("HP Camara")
@@ -100,8 +100,7 @@ class ProductControllerTest {
 				.productImage(null)
 				.presentation(presentation1)
 				.build();
-		
-			
+
 		product2 = Product.builder()
 				.name("Frigorifico")
 				.description("General Electric")
@@ -110,7 +109,7 @@ class ProductControllerTest {
 				.productImage(null)
 				.presentation(presentation2)
 				.build();
-		
+
 		products.add(product1);
 		products.add(product2);
 	}
@@ -120,16 +119,16 @@ class ProductControllerTest {
 	void testFindAll() throws Exception {
 
 		// given
-		
+
 		given(productService.findAll(Sort.by("name")))
-			.willReturn(products);
+				.willReturn(products);
 
 		// when => Realizar la peticion (request) HTTP, mediante el metodo GET
 		// al end point de products ("/products"). Aqui se utiliza MockMvc
 
 		ResultActions response = mockMvc
 				.perform(get("/products")
-				.accept(MediaType.APPLICATION_JSON));
+						.accept(MediaType.APPLICATION_JSON));
 		// then
 
 		response.andExpect(status().isOk()).andDo(print())
@@ -140,57 +139,58 @@ class ProductControllerTest {
 
 	@Test
 	@DisplayName("Controller Test para Persistir un Producto")
-	void testSaveProduct()  {
-		
+	void testSaveProduct() {
+
 		// given
 		given(productService.save(any(Product.class)))
-			.willAnswer(invocation -> invocation.getArgument(0));
-		
+				.willAnswer(invocation -> invocation.getArgument(0));
+
 		// when
-		
-		/* Convertir el producto a formato JSON, es decir, una cadena (String)
-		 * en formato de JSON, lo cual hace el objectMapper que hemos inyectado como 
-		 * dependencia al principio de la clase bajo Test */
-		
+
+		/*
+		 * Convertir el producto a formato JSON, es decir, una cadena (String)
+		 * en formato de JSON, lo cual hace el objectMapper que hemos inyectado como
+		 * dependencia al principio de la clase bajo Test
+		 */
+
 		String jsonStringProduct = objectMapper.writeValueAsString(product1);
-		
+
 		MockMultipartFile bytesArrayProduct = new MockMultipartFile(
-				    "product", 
-				    null, 
-				    "application/json", 
-				    jsonStringProduct.getBytes());
-		
+				"product",
+				null,
+				"application/json",
+				jsonStringProduct.getBytes());
+
 		try {
-				mockMvc
-				    .perform(multipart("/products")
-					.file(bytesArrayProduct)
-					.file("file", null))			    
-				    	.andDo(print())
-				    	.andExpect(status().isCreated())
-				    	.andExpect(jsonPath("$.product.name",
-		  			is(product1.getName())));
-		  	
-		  
+			mockMvc
+					.perform(multipart("/products")
+							.file(bytesArrayProduct)
+							.file("file", null))
+					.andDo(print())
+					.andExpect(status().isCreated())
+					.andExpect(jsonPath("$.product.name",
+							is(product1.getName())));
+
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
+
 		// then
-		
+
 	}
 
 	@Test
 	@DisplayName("Controller Test para recuperar un producto por su ID")
 	void testRecuperarProductoPorSuID() throws Exception {
-		
+
 		// given
-		
+
 		int productId = 1;
-		
+
 		given(productService.findById(productId))
-			.willReturn(product1);
-		
+				.willReturn(product1);
+
 		// when
 		mockMvc.perform(get("/products/{id}",
 				productId))
@@ -203,25 +203,65 @@ class ProductControllerTest {
 	@Test
 	@DisplayName("Controller Test Producto no encontrado")
 	void testProductoNoEncontrado() throws Exception {
-		
+
 		// given
 		given(productService.findById(20)).willReturn(null);
-		
+
 		// when
-		
+
 		mockMvc.perform(get("/products/{id}", 20))
-			.andDo(print())
-			.andExpect(status().isNotFound());
+				.andDo(print())
+				.andExpect(status().isNotFound());
 	}
+
+	@Test
+	@DisplayName("Controller Test para actualizar un producto")
+	void testActualizarProducto() {
+		// given
+
+		int productoId = 1;
+
+		Presentation presentacionGuardada = Presentation.builder().description(null).name("docena").build();
+
+		Product productoGuardado = Product.builder()
+				.name("Camara")
+				.description("Resolucion Alta")
+				.price(new BigDecimal(2000))
+				.stock(40)
+				.presentation(presentacionGuardada)
+				.productImage("perro.jpeg")
+				.build();
+
+		Presentation presentacionActualizada = Presentation.builder().description(null).name("unidad").build();
+
+		Product productoActualizado = Product.builder()
+				.name("HDCamara")
+				.description("Muy Alta Resolucion")
+				.price(new BigDecimal(2500))
+				.stock(400)
+				.presentation(presentacionActualizada)
+				.productImage("perro.jpeg")
+				.build();
+
+		given(productService.findById(productoId))
+				.willReturn(productoGuardado);
+
+		given(productService.save(any(Product.class)))
+				.willAnswer(invocation -> invocation.getArgument(0));
+
+		// when
+
+		// Si todo el producto se recibe en el cuerpo de la peticion procedemos
+		// de la forma siguiente, de lo contrario, si por una parte va el producto
+		// y por otra la imagen, hay que proceder de manera diferente (muy similar
+		// al test de persistir un producto con su imagen)
+
+		//CNTRL + SHIF + 7
+
+	// 	ResultActions response = mockMvc.perform(put("/productos/{id}", productoId)
+	// 			.contentType(MediaType.APPLICATION_JSON)
+	// 			.content(objectMapper.writeValueAsString(productoActualizado))
+	// 			.header("Authorization", this.token));
+	}
+
 }
-
-
-
-
-
-
-
-
-
-
-
