@@ -35,6 +35,8 @@ import lombok.NoArgsConstructor;
 @Builder
 public class User {
 
+    private static final long serialVersionUID = 1l;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
